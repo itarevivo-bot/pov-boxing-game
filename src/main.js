@@ -3,14 +3,17 @@ const $ = (selector) => document.querySelector(selector);
 let fight = createFight(), started = false, lastPunch = 0, audio, sound = false, generation = 0;
 const animations = new Map();
 let selectedOpponent = null, enteredRing = false;
-const maleFighter = $('#fighter').innerHTML;
-// Temporary variants use the same stance and proportions until final art is designed.
-const femaleFighter = maleFighter.replace('<g stroke="#231c17"', '<path d="M236 51Q281 45 267 112L250 140L245 75Z" fill="#151816"/><g stroke="#231c17"') + '<path d="M158 207L173 215Q200 231 230 215L246 207L249 253L241 335Q203 348 161 335L151 253Z" fill="#222b23" stroke="#141c15" stroke-width="3"/><path d="M162 329Q203 342 241 329" fill="none" stroke="#b5f17d" stroke-width="6"/>';
-function portrait(markup, variant) {
-  return `<svg viewBox="70 20 260 340" aria-hidden="true">${markup.replaceAll('id="', `id="${variant}-`).replaceAll('url(#', `url(#${variant}-`)}</svg>`;
+const opponentMasters = {
+  male: `${import.meta.env.BASE_URL}characters/male_boxer_master.png`,
+  female: `${import.meta.env.BASE_URL}characters/female_boxer_master.png`,
+};
+for (const [opponent, source] of Object.entries(opponentMasters)) {
+  const image = document.createElement('img');
+  image.src = source;
+  image.alt = '';
+  image.draggable = false;
+  $(`#${opponent}-portrait`).append(image);
 }
-$('#male-portrait').innerHTML = portrait(maleFighter, 'male');
-$('#female-portrait').innerHTML = portrait(femaleFighter, 'female');
 const choices = [...document.querySelectorAll('[data-opponent]')];
 choices.forEach(choice => choice.addEventListener('click', () => {
   selectedOpponent = choice.dataset.opponent;
@@ -42,7 +45,8 @@ window.addEventListener('pageshow', event => {
 });
 $('#start-fight').addEventListener('click', () => {
   if (!selectedOpponent || enteredRing) return;
-  $('#fighter').innerHTML = selectedOpponent === 'female' ? femaleFighter : maleFighter;
+  $('#fighter').src = opponentMasters[selectedOpponent];
+  $('#fighter').alt = `${selectedOpponent === 'male' ? 'Male' : 'Female'} boxer master opponent`;
   $('.opponent-health small').textContent = `${selectedOpponent.toUpperCase()} BOXER`;
   enteredRing = true;
   $('#selection').hidden = true;
