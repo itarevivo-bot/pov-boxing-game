@@ -22,6 +22,24 @@ choices.forEach(choice => choice.addEventListener('click', () => {
   $('#selection-message').textContent = `${selectedOpponent === 'male' ? 'Male' : 'Female'} boxer selected. Ready when you are.`;
   $('#start-fight').hidden = false;
 }));
+function showOpponentSelection() {
+  selectedOpponent = null;
+  enteredRing = false;
+  $('.game').hidden = true;
+  $('#selection').hidden = false;
+  $('#start-fight').hidden = true;
+  choices.forEach(choice => {
+    choice.setAttribute('aria-pressed', 'false');
+    choice.querySelector('.choice-status').textContent = 'SELECT OPPONENT';
+  });
+  $('#selection-message').textContent = 'Choose an opponent to continue.';
+  reset();
+}
+// A browser history restoration can retain the live DOM and JavaScript state.
+// Always require a new selection when the page is opened again this way.
+window.addEventListener('pageshow', event => {
+  if (event.persisted) showOpponentSelection();
+});
 $('#start-fight').addEventListener('click', () => {
   if (!selectedOpponent || enteredRing) return;
   $('#fighter').innerHTML = selectedOpponent === 'female' ? femaleFighter : maleFighter;
@@ -79,4 +97,4 @@ $('#restart').addEventListener('click', reset); $('#again').addEventListener('cl
 $('#sound').addEventListener('click', () => { sound = !sound; $('#sound').setAttribute('aria-pressed', String(sound)); $('#sound').setAttribute('aria-label', sound ? 'Mute sound' : 'Enable sound'); if (sound) tone(220); });
 setInterval(() => { if (!started || fight.ended || document.hidden) return; tick(fight); render(); }, 1000);
 setInterval(() => { if (!started || fight.ended || document.hidden) return; animateClass($('#fighter'),'attack'); const current = generation; setTimeout(() => { if (current !== generation || fight.ended) return; counter(fight); animateClass($('.game'),'damage'); tone(65,.14); render(); }, 250); }, 3500);
-render();
+showOpponentSelection();
