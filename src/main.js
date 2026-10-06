@@ -21,6 +21,7 @@ for (const [opponent, source] of Object.entries(opponentMasters)) {
 const choices = [...document.querySelectorAll('[data-opponent]')];
 choices.forEach(choice => choice.addEventListener('click', () => {
   selectedOpponent = choice.dataset.opponent;
+  if (selectedOpponent === 'male') reactions.preloadMaleHooks();
   choices.forEach(item => {
     const selected = item === choice;
     item.setAttribute('aria-pressed', String(selected));
@@ -113,7 +114,7 @@ function throwPunch(button) {
     activePunchButtons.delete(side);
   }).catch(() => {});
   const current = generation;
-  setTimeout(() => { if (current !== generation || fight.ended) return; const damage = punch(fight, type); $('#fighter').classList.remove('attack'); reactions.play(type, side); animateClass($('#impact'),'flash'); $('#hit-text').textContent = `${type === 'uppercut' ? 'UPPERCUT' : type === 'hook' ? 'HOOK' : 'CLEAN HIT'} −${damage}`; animateClass($('#hit-text'),'show'); tone(110); render(); }, reduced ? 50 : 130);
+  setTimeout(() => { if (current !== generation || fight.ended) return; const damage = punch(fight, type); $('#fighter').classList.remove('attack'); reactions.play(type, side, fight.opponent); animateClass($('#impact'),'flash'); $('#hit-text').textContent = `${type === 'uppercut' ? 'UPPERCUT' : type === 'hook' ? 'HOOK' : 'CLEAN HIT'} −${damage}`; animateClass($('#hit-text'),'show'); tone(110); render(); }, reduced ? 50 : 130);
 }
 buttons.forEach(button => button.addEventListener('pointerdown', event => { if (event.button !== 0) return; event.preventDefault(); throwPunch(button); }));
 buttons.forEach(button => button.addEventListener('click', event => { if (event.detail === 0) throwPunch(button); }));

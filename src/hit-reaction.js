@@ -1,3 +1,5 @@
+import { MALE_LEFT_HOOK_FILES, maleLeftHookStage } from './male-left-hook.js';
+import { MALE_RIGHT_HOOK_FILES, maleRightHookStage } from './male-right-hook.js';
 export const RECOVERY_MS = 320;
 const faces = {
   male: {
@@ -33,20 +35,60 @@ export function reactionPoses(type, side) {
 }
 export function createHitReactions(fighter) {
   let running = [];
+  let opponent = null;
+  const guard = fighter.querySelector('.opponent-guard');
+  const hookFrames = { left: [], right: [] };
+  function preloadMaleHooks() {
+    for (const side of ['left', 'right']) preloadHook(side);
+  }
+  function preloadHook(side) {
+    if (hookFrames[side].length) return;
+    const pack = fighter.querySelector(`.male-${side}-hook-frames`);
+    const files = side === 'left' ? MALE_LEFT_HOOK_FILES : MALE_RIGHT_HOOK_FILES;
+    hookFrames[side] = files.map((file, index) => {
+      const image = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+      image.setAttribute('width', '1086');
+      image.setAttribute('height', '1448');
+      image.setAttribute('preserveAspectRatio', 'xMidYMin meet');
+      image.setAttribute('href', `${import.meta.env.BASE_URL}${file}`);
+      image.dataset.stage = index + 1;
+      pack.append(image);
+      return image;
+    });
+  }
   function stop() { running.forEach(animation => animation.cancel()); running = []; }
-  function setOpponent(source, opponent) {
+  function setOpponent(source, selectedOpponent) {
     stop();
+    opponent = selectedOpponent;
+    if (opponent === 'male') preloadMaleHooks();
     const face = faces[opponent];
-    fighter.querySelectorAll('image').forEach(image => image.setAttribute('href', source));
+    guard.querySelectorAll('image').forEach(image => image.setAttribute('href', source));
     fighter.querySelectorAll('[data-head-mask]').forEach(path => path.setAttribute('d', face.head));
     fighter.querySelector('.reaction-eyes').innerHTML = `<path d="${face.eyes}" fill="${face.skin}"/><path d="${face.lashes}" fill="none" stroke="#58372b" stroke-width="2" stroke-linecap="round"/>`;
     fighter.querySelector('.reaction-tension').innerHTML = `<path d="${face.tension}" fill="none" stroke="#5a3029" stroke-width="2.5" stroke-linecap="round"/>`;
   }
-  function play(type, side) {
+  function play(type, side, health = 100) {
     stop();
     const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const poses = reactionPoses(type, side);
     const options = { duration: reduced ? 160 : RECOVERY_MS, easing: 'linear' };
+    const stage = maleLeftHookStage(opponent, type, side, health)
+      ?? maleRightHookStage(opponent, type, side, health);
+    if (stage !== null) {
+      // Supplied poses contain the direction: left hook -> rightward reaction;
+      // right hook -> leftward reaction. The two packs remain separate.
+      // Blend the complete transparent frame in and recover to the master guard;
+      // do not mirror it or add the generic hook transform on top.
+      running.push(guard.animate([
+        { opacity: 1 }, { opacity: 0, offset: .2 },
+        { opacity: 0, offset: .32, easing: 'cubic-bezier(.2,.2,.2,1)' }, { opacity: 1 },
+      ], options));
+      running.push(hookFrames[side][stage - 1].animate([
+        { opacity: 0 }, { opacity: 1, offset: .2 },
+        { opacity: 1, offset: .32, easing: 'cubic-bezier(.2,.2,.2,1)' }, { opacity: 0 },
+      ], options));
+      return;
+    }
     // Fast absorption, brief settling, then a longer eased recovery to guard.
     const motion = impact => [
       { transform: poses.neutral, offset: 0, easing: 'cubic-bezier(.15,.65,.3,1)' },
@@ -63,5 +105,5 @@ export function createHitReactions(fighter) {
       { opacity: 0 }, { opacity: .24, offset: .2 }, { opacity: .16, offset: .45 }, { opacity: 0 },
     ], options));
   }
-  return { setOpponent, play, stop };
+  return { setOpponent, play, stop, preloadMaleHooks };
 }

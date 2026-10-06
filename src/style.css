@@ -57,3 +57,4 @@
 .opponent-head{transform-origin:48% 31%}
 .opponent-body{transform-origin:50% 55%}
 .reaction-eyes,.reaction-tension{opacity:0;pointer-events:none}
+.male-left-hook-frames image,.male-right-hook-frames image{opacity:0;pointer-events:none}
