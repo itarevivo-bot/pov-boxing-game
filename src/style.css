@@ -48,3 +48,6 @@
 
 /* Keep the right glove's wordmark readable through the existing hand mirroring. */
 .glove-right text{transform:translateX(218px) scaleX(-1)}
+
+.ring.arena-realistic{object-fit:cover}
+.glove[data-active-punch="uppercut"] .premium-glove-back{visibility:hidden}
