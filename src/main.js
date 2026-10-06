@@ -1,7 +1,9 @@
+import { createHitReactions } from './hit-reaction.js';
 import { createPunchKeyframes } from './punch-animation.js';
 import { createFight, punch, counter } from './engine.js';
 const $ = (selector) => document.querySelector(selector);
 let fight = createFight(), started = false, lastPunch = 0, audio, sound = false, generation = 0;
+const reactions = createHitReactions($('#fighter'));
 const animations = new Map();
 const activePunchButtons = new Map();
 let selectedOpponent = null, enteredRing = false;
@@ -47,8 +49,7 @@ window.addEventListener('pageshow', event => {
 });
 $('#start-fight').addEventListener('click', () => {
   if (!selectedOpponent || enteredRing) return;
-  $('#fighter').src = opponentMasters[selectedOpponent];
-  $('#fighter').alt = `${selectedOpponent === 'male' ? 'Male' : 'Female'} boxer master opponent`;
+  reactions.setOpponent(opponentMasters[selectedOpponent], selectedOpponent);
   $('.opponent-health small').textContent = `${selectedOpponent.toUpperCase()} BOXER`;
   enteredRing = true;
   $('#selection').hidden = true;
@@ -112,13 +113,13 @@ function throwPunch(button) {
     activePunchButtons.delete(side);
   }).catch(() => {});
   const current = generation;
-  setTimeout(() => { if (current !== generation || fight.ended) return; const damage = punch(fight, type); $('#fighter').classList.remove('hit-left','hit-right','attack'); animateClass($('#fighter'), `hit-${side}`); animateClass($('#impact'),'flash'); $('#hit-text').textContent = `${type === 'uppercut' ? 'UPPERCUT' : type === 'hook' ? 'HOOK' : 'CLEAN HIT'} −${damage}`; animateClass($('#hit-text'),'show'); tone(110); render(); }, reduced ? 50 : 130);
+  setTimeout(() => { if (current !== generation || fight.ended) return; const damage = punch(fight, type); $('#fighter').classList.remove('attack'); reactions.play(type, side); animateClass($('#impact'),'flash'); $('#hit-text').textContent = `${type === 'uppercut' ? 'UPPERCUT' : type === 'hook' ? 'HOOK' : 'CLEAN HIT'} −${damage}`; animateClass($('#hit-text'),'show'); tone(110); render(); }, reduced ? 50 : 130);
 }
 buttons.forEach(button => button.addEventListener('pointerdown', event => { if (event.button !== 0) return; event.preventDefault(); throwPunch(button); }));
 buttons.forEach(button => button.addEventListener('click', event => { if (event.detail === 0) throwPunch(button); }));
 const keys = ['a','s','d','j','k','l'];
 document.addEventListener('keydown', event => { if (!enteredRing || event.repeat || event.ctrlKey || event.metaKey || event.altKey) return; const index = keys.indexOf(event.key.toLowerCase()); if (index !== -1) { event.preventDefault(); throwPunch(buttons[index]); } if (event.key === 'Escape' && fight.ended) reset(); });
-function reset() { generation++; animations.forEach(a => a.cancel()); animations.clear(); activePunchButtons.clear(); for (const side of ['left','right']) delete $(`#${side}-glove`).dataset.activePunch; fight = createFight(); started = false; lastPunch = -1000; $('#result').hidden = true; buttons.forEach(b => { b.disabled = false; b.classList.remove('active'); }); $('#fighter').classList.remove('attack','hit-left','hit-right'); $('#impact').classList.remove('flash'); $('#hit-text').classList.remove('show'); $('.game').classList.remove('damage'); render(); $('#announcement').textContent = 'New fight ready'; }
+function reset() { generation++; animations.forEach(a => a.cancel()); animations.clear(); reactions.stop(); activePunchButtons.clear(); for (const side of ['left','right']) delete $(`#${side}-glove`).dataset.activePunch; fight = createFight(); started = false; lastPunch = -1000; $('#result').hidden = true; buttons.forEach(b => { b.disabled = false; b.classList.remove('active'); }); $('#fighter').classList.remove('attack','hit-left','hit-right'); $('#impact').classList.remove('flash'); $('#hit-text').classList.remove('show'); $('.game').classList.remove('damage'); render(); $('#announcement').textContent = 'New fight ready'; }
 $('#restart').addEventListener('click', reset); $('#again').addEventListener('click', () => { reset(); buttons[0].focus(); });
 $('#sound').addEventListener('click', () => { sound = !sound; $('#sound').setAttribute('aria-pressed', String(sound)); $('#sound').setAttribute('aria-label', sound ? 'Mute sound' : 'Enable sound'); if (sound) tone(220); });
 setInterval(() => { if (!started || fight.ended || document.hidden) return; animateClass($('#fighter'),'attack'); const current = generation; setTimeout(() => { if (current !== generation || fight.ended) return; counter(fight); animateClass($('.game'),'damage'); tone(65,.14); render(); }, 250); }, 3500);
