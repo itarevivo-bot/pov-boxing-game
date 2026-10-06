@@ -45,3 +45,6 @@
 .controls [data-punch="uppercut"]{order:2;position:relative}
 .left-controls [data-punch="uppercut"]{left:clamp(16px,2vw,32px)}
 .right-controls [data-punch="uppercut"]{right:clamp(16px,2vw,32px)}
+
+/* Keep the right glove's wordmark readable through the existing hand mirroring. */
+.glove-right text{transform:translateX(218px) scaleX(-1)}
