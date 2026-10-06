@@ -1,5 +1,5 @@
-import { MALE_LEFT_HOOK_FILES, maleLeftHookStage } from './male-left-hook.js';
-import { MALE_RIGHT_HOOK_FILES, maleRightHookStage } from './male-right-hook.js';
+import { HOOK_RECOVERY_MS, hookReactionKeyframes } from './hook-reaction-animation.js';
+import { MALE_HOOK_STAGES, createInjuryState, advanceInjury } from './injury-state.js';
 export const RECOVERY_MS = 320;
 const faces = {
   male: {
@@ -36,33 +36,51 @@ export function reactionPoses(type, side) {
 export function createHitReactions(fighter) {
   let running = [];
   let opponent = null;
+  let masterSource = null;
+  let injury = createInjuryState();
   const guard = fighter.querySelector('.opponent-guard');
   const hookFrames = { left: [], right: [] };
+  const idleImages = { left: [], right: [] };
+  function applyIdle(source) {
+    guard.querySelectorAll('image').forEach(image => image.setAttribute('href', source));
+    fighter.dataset.injuryStage = String(injury.stage);
+    fighter.dataset.injurySide = injury.side ?? '';
+  }
   function preloadMaleHooks() {
     for (const side of ['left', 'right']) preloadHook(side);
   }
   function preloadHook(side) {
     if (hookFrames[side].length) return;
     const pack = fighter.querySelector(`.male-${side}-hook-frames`);
-    const files = side === 'left' ? MALE_LEFT_HOOK_FILES : MALE_RIGHT_HOOK_FILES;
-    hookFrames[side] = files.map((file, index) => {
+    hookFrames[side] = MALE_HOOK_STAGES[side].map(({ reaction, idle }, index) => {
+      // Warm the paired neutral artwork before it is needed for recovery.
+      const neutral = document.createElement('img');
+      neutral.src = `${import.meta.env.BASE_URL}${idle}`;
+      idleImages[side].push(neutral);
       const image = document.createElementNS('http://www.w3.org/2000/svg', 'image');
       image.setAttribute('width', '1086');
       image.setAttribute('height', '1448');
       image.setAttribute('preserveAspectRatio', 'xMidYMin meet');
-      image.setAttribute('href', `${import.meta.env.BASE_URL}${file}`);
+      image.setAttribute('href', `${import.meta.env.BASE_URL}${reaction}`);
       image.dataset.stage = index + 1;
       pack.append(image);
       return image;
     });
   }
   function stop() { running.forEach(animation => animation.cancel()); running = []; }
+  function resetInjury() {
+    stop();
+    injury = createInjuryState();
+    if (masterSource) applyIdle(masterSource);
+  }
   function setOpponent(source, selectedOpponent) {
     stop();
     opponent = selectedOpponent;
+    masterSource = source;
+    injury = createInjuryState();
     if (opponent === 'male') preloadMaleHooks();
     const face = faces[opponent];
-    guard.querySelectorAll('image').forEach(image => image.setAttribute('href', source));
+    applyIdle(source);
     fighter.querySelectorAll('[data-head-mask]').forEach(path => path.setAttribute('d', face.head));
     fighter.querySelector('.reaction-eyes').innerHTML = `<path d="${face.eyes}" fill="${face.skin}"/><path d="${face.lashes}" fill="none" stroke="#58372b" stroke-width="2" stroke-linecap="round"/>`;
     fighter.querySelector('.reaction-tension').innerHTML = `<path d="${face.tension}" fill="none" stroke="#5a3029" stroke-width="2.5" stroke-linecap="round"/>`;
@@ -72,21 +90,21 @@ export function createHitReactions(fighter) {
     const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
     const poses = reactionPoses(type, side);
     const options = { duration: reduced ? 160 : RECOVERY_MS, easing: 'linear' };
-    const stage = maleLeftHookStage(opponent, type, side, health)
-      ?? maleRightHookStage(opponent, type, side, health);
-    if (stage !== null) {
-      // Supplied poses contain the direction: left hook -> rightward reaction;
-      // right hook -> leftward reaction. The two packs remain separate.
-      // Blend the complete transparent frame in and recover to the master guard;
-      // do not mirror it or add the generic hook transform on top.
-      running.push(guard.animate([
-        { opacity: 1 }, { opacity: 0, offset: .2 },
-        { opacity: 0, offset: .32, easing: 'cubic-bezier(.2,.2,.2,1)' }, { opacity: 1 },
-      ], options));
-      running.push(hookFrames[side][stage - 1].animate([
-        { opacity: 0 }, { opacity: 1, offset: .2 },
-        { opacity: 1, offset: .32, easing: 'cubic-bezier(.2,.2,.2,1)' }, { opacity: 0 },
-      ], options));
+    const nextInjury = advanceInjury(injury, opponent, type, side, health);
+    if (nextInjury !== injury) {
+      injury = nextInjury;
+      const stage = injury.stage;
+      // Recovery, counters, and non-hook hits all reuse this damaged guard.
+      applyIdle(idleImages[side][stage - 1].src);
+      // Artwork supplies the received-head direction; subtle motion adds snap,
+      // peak recoil and recovery without flipping either directional asset set.
+      const frames = hookReactionKeyframes(side);
+      const hookOptions = { duration: HOOK_RECOVERY_MS, easing: 'linear' };
+      running.push(guard.animate(frames.guard, hookOptions));
+      const frame = hookFrames[side][stage - 1];
+      frame.style.transformBox = 'fill-box';
+      frame.style.transformOrigin = '50% 65%';
+      running.push(frame.animate(frames.reaction, hookOptions));
       return;
     }
     // Fast absorption, brief settling, then a longer eased recovery to guard.
@@ -105,5 +123,5 @@ export function createHitReactions(fighter) {
       { opacity: 0 }, { opacity: .24, offset: .2 }, { opacity: .16, offset: .45 }, { opacity: 0 },
     ], options));
   }
-  return { setOpponent, play, stop, preloadMaleHooks };
+  return { setOpponent, play, stop, resetInjury, preloadMaleHooks };
 }
