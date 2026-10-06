@@ -1,3 +1,4 @@
+import { createPunchKeyframes } from './punch-animation.js';
 import { createFight, punch, counter, tick } from './engine.js';
 const $ = (selector) => document.querySelector(selector);
 let fight = createFight(), started = false, lastPunch = 0, audio, sound = false, generation = 0;
@@ -83,12 +84,22 @@ function throwPunch(button) {
   if (!enteredRing || fight.ended || now - lastPunch < 280) return;
   lastPunch = now; started = true;
   const side = button.dataset.side, type = button.dataset.punch;
-  const glove = $(`#${side}-glove`), right = side === 'right', mirror = right ? 'scaleX(-1) ' : '';
-  const rest = `${mirror}rotate(16deg)`;
-  const strike = type === 'hook' ? `${mirror}translate(${right ? '-65px' : '65px'}, -105px) rotate(-38deg) scale(1.15)` : type === 'uppercut' ? `${mirror}translate(${right ? '40px' : '-40px'}, -175px) rotate(30deg) scale(.92)` : `${mirror}translate(${right ? '40px' : '-40px'}, -150px) rotate(-12deg) scale(.72)`;
+  const glove = $(`#${side}-glove`);
   animations.get(side)?.cancel();
+  const scene = $('.scene').getBoundingClientRect();
+  const opponent = $('#fighter').getBoundingClientRect();
+  const frames = createPunchKeyframes({
+    side, type,
+    glove: { left: glove.offsetLeft, top: glove.offsetTop, width: glove.offsetWidth, height: glove.offsetHeight },
+    target: {
+      x: opponent.left + opponent.width / 2 - scene.left,
+      faceY: opponent.top + opponent.height * .23 - scene.top,
+      chinY: opponent.top + opponent.height * .31 - scene.top,
+      width: opponent.width,
+    },
+  });
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  animations.set(side, glove.animate([{ transform: rest }, { transform: strike, offset: .45 }, { transform: rest }], { duration: reduced ? 120 : 320, easing: 'ease-in-out' }));
+  animations.set(side, glove.animate(frames, { duration: reduced ? 120 : 320, easing: 'linear' }));
   button.classList.add('active'); const current = generation;
   setTimeout(() => { button.classList.remove('active'); if (current !== generation || fight.ended) return; const damage = punch(fight, type); $('#fighter').classList.remove('hit-left','hit-right','attack'); animateClass($('#fighter'), `hit-${side}`); animateClass($('#impact'),'flash'); $('#hit-text').textContent = `${type === 'uppercut' ? 'UPPERCUT' : type === 'hook' ? 'HOOK' : 'CLEAN HIT'} −${damage}`; animateClass($('#hit-text'),'show'); tone(110); render(); }, reduced ? 50 : 130);
 }
