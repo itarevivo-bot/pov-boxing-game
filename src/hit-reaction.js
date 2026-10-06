@@ -41,10 +41,57 @@ export function createHitReactions(fighter) {
   const guard = fighter.querySelector('.opponent-guard');
   const hookFrames = { left: [], right: [] };
   const idleImages = { left: [], right: [] };
-  function applyIdle(source) {
-    guard.querySelectorAll('image').forEach(image => image.setAttribute('href', source));
+  // Keep the opposite cheek visible when the latest full guard sprite changes.
+  // LEFT pack injuries occupy the viewer-right cheek; RIGHT occupies viewer-left.
+  const ns = 'http://www.w3.org/2000/svg';
+  const definitions = fighter.querySelector('defs');
+  const blur = document.createElementNS(ns, 'filter');
+  blur.id = 'injury-cheek-feather';
+  blur.innerHTML = '<feGaussianBlur stdDeviation="5"/>';
+  definitions.append(blur);
+  const cheekImages = {};
+  for (const side of ['left', 'right']) {
+    const mask = document.createElementNS(ns, 'mask');
+    mask.id = `injury-${side}-cheek`;
+    mask.setAttribute('maskUnits', 'userSpaceOnUse');
+    mask.setAttribute('x', '0'); mask.setAttribute('y', '0');
+    mask.setAttribute('width', '1086'); mask.setAttribute('height', '1448');
+    const path = side === 'left'
+      ? 'M470 225Q560 210 610 250L610 365Q580 430 500 445L470 390Z'
+      : 'M470 225Q390 210 350 250L365 365Q395 430 470 445Z';
+    mask.innerHTML = `<path d="${path}" fill="white" filter="url(#injury-cheek-feather)"/>`;
+    definitions.append(mask);
+    const image = document.createElementNS(ns, 'image');
+    image.dataset.injuryCheek = side;
+    image.setAttribute('mask', `url(#injury-${side}-cheek)`);
+    image.setAttribute('preserveAspectRatio', 'xMidYMin meet');
+    image.style.display = 'none';
+    fighter.querySelector('.opponent-head').insertBefore(image, fighter.querySelector('.reaction-eyes'));
+    cheekImages[side] = image;
+  }
+  function applyBothCheeks() {
+    fighter.dataset.leftDamage = injury.LeftDamage;
+    fighter.dataset.rightDamage = injury.RightDamage;
+    for (const side of ['left', 'right']) {
+      const level = side === 'left' ? injury.LeftDamage : injury.RightDamage;
+      const image = cheekImages[side];
+      // The most recent side is already represented by the full guard sprite.
+      image.style.display = level > 0 && side !== injury.side ? '' : 'none';
+      if (!level) continue;
+      const asset = MALE_HOOK_STAGES[side][level - 1];
+      image.setAttribute('href', `${import.meta.env.BASE_URL}${asset.idle}`);
+      image.dataset.stage = level;
+      for (const [name, value] of Object.entries(asset.idleLayout)) image.setAttribute(name, value);
+    }
+  }
+  function applyIdle(source, layout = { x: 0, y: 0, width: 1086, height: 1448 }) {
+    guard.querySelectorAll('image:not([data-injury-cheek])').forEach(image => {
+      image.setAttribute('href', source);
+      for (const [name, value] of Object.entries(layout)) image.setAttribute(name, value);
+    });
     fighter.dataset.injuryStage = String(injury.stage);
     fighter.dataset.injurySide = injury.side ?? '';
+    applyBothCheeks();
   }
   function preloadMaleHooks() {
     for (const side of ['left', 'right']) preloadHook(side);
@@ -95,7 +142,7 @@ export function createHitReactions(fighter) {
       injury = nextInjury;
       const stage = injury.stage;
       // Recovery, counters, and non-hook hits all reuse this damaged guard.
-      applyIdle(idleImages[side][stage - 1].src);
+      applyIdle(idleImages[side][stage - 1].src, MALE_HOOK_STAGES[side][stage - 1].idleLayout);
       // Artwork supplies the received-head direction; subtle motion adds snap,
       // peak recoil and recovery without flipping either directional asset set.
       const frames = hookReactionKeyframes(side);

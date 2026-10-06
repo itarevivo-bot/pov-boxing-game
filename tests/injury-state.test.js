@@ -3,22 +3,21 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { MALE_HOOK_STAGES, createInjuryState, advanceInjury } from '../src/injury-state.js';
 
-test('hook injury remains at the highest reached grade and survives other hits', () => {
-  let state = advanceInjury(createInjuryState(), 'male', 'hook', 'right', 65);
-  assert.deepEqual(state, { stage: 4, side: 'right' });
-  assert.equal(advanceInjury(state, 'male', 'straight', 'left', 63), state);
-  assert.equal(advanceInjury(state, 'male', 'uppercut', 'right', 60), state);
-  state = advanceInjury(state, 'male', 'hook', 'left', 95);
-  assert.deepEqual(state, { stage: 4, side: 'left' });
-  state = advanceInjury(state, 'male', 'hook', 'right', 15);
-  assert.equal(state.stage, 9);
-  assert.equal(advanceInjury(state, 'male', 'hook', 'left', 5).stage, 10);
-});
-
-test('fresh fights clear injury and the female opponent does not use male assets', () => {
-  const state = createInjuryState();
-  assert.deepEqual(state, { stage: 0, side: null });
-  assert.equal(advanceInjury(state, 'female', 'hook', 'right', 1), state);
+test('left and right hook counts accumulate independently, capped at ten', () => {
+  let state = createInjuryState();
+  state = advanceInjury(state, 'male', 'hook', 'left');
+  state = advanceInjury(state, 'male', 'hook', 'left');
+  state = advanceInjury(state, 'male', 'hook', 'right');
+  assert.equal(state.LeftDamage, 2);
+  assert.equal(state.RightDamage, 1);
+  for (let i = 0; i < 20; i++) state = advanceInjury(state, 'male', 'hook', 'right');
+  assert.equal(state.LeftDamage, 2);
+  assert.equal(state.RightDamage, 10);
+  assert.equal(advanceInjury(state, 'male', 'straight', 'left'), state);
+  assert.equal(advanceInjury(state, 'male', 'uppercut', 'right'), state);
+  assert.equal(advanceInjury(state, 'female', 'hook', 'left'), state);
+  assert.equal(createInjuryState().LeftDamage, 0);
+  assert.equal(createInjuryState().RightDamage, 0);
 });
 
 test('both hook packs have ten explicit reaction/idle pairs with PNG transparency', () => {
