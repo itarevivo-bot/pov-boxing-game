@@ -16,12 +16,17 @@ for (const size of [{w:844,h:390,gw:160,gh:196,gap:105}, {w:1440,h:900,gw:274,gh
       const points=frames.map(f=>knuckle(f,glove));
       assert.deepEqual(points.at(-1),points[0], 'returns to guard');
       assert.equal(points[0].mirror,direction);
-      const contact=points.at(-2);
+      const contactIndex=frames.findIndex(f=>Math.abs(f.offset-130/320)<.000001);
+      const contact=points[contactIndex];
       assert.ok(direction*(contact.x-points[0].x)>0,'travels inward');
       if(type==='hook') {
         assert.ok(direction*(contact.x-target.x)>0,'sweeps across opponent');
         assert.ok(direction*(points[1].x-points[0].x)>0,'never winds outward');
-        assert.ok(Math.abs(points[1].y-contact.y)<glove.height*.1,'horizontal strike arc');
+        const sweep=points.slice(1,contactIndex+1);
+        for(let i=1;i<sweep.length;i++) assert.ok(direction*(sweep[i].x-sweep[i-1].x)>=0,'sweep stays inward');
+        assert.ok(Math.min(...sweep.map(p=>p.y))<contact.y-glove.height*.03,'sickle arc rises above impact before curving inward');
+        const angle=Number(frames[contactIndex].transform.match(/rotate\(([^)]+)deg/)[1]);
+        assert.ok(direction*angle>=70,'knuckles face inward at sideways impact');
       } else if(type==='straight') {
         assert.ok(Math.abs(contact.x-target.x)<.001);
         assert.ok(Math.abs(contact.y-target.faceY)<.001);
@@ -31,6 +36,8 @@ for (const size of [{w:844,h:390,gw:160,gh:196,gap:105}, {w:1440,h:900,gw:274,gh
         assert.ok(points[1].y>points[0].y,'starts with low dip');
         assert.ok(points[2].y<points[1].y && contact.y<points[2].y,'rises from below');
         assert.ok(Math.abs(contact.y-target.chinY)<.001);
+        const angle=Number(frames[contactIndex].transform.match(/rotate\(([^)]+)deg/)[1]);
+        assert.equal(angle,-20*direction,'uppercut wrist differs from straight');
       }
     });
   }

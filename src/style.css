@@ -33,3 +33,8 @@
 #fighter{aspect-ratio:2 / 3;object-fit:cover}
 .choice-portrait{position:relative;overflow:hidden;border-radius:4px}
 .choice-portrait img{position:absolute;left:50%;top:0;transform:translateX(-50%);height:160%;width:auto;max-width:none}
+
+/* Punch-only artwork is hidden at guard; no layout or opponent changes. */
+.hook-arm,.uppercut-palm{display:none}
+.glove[data-active-punch="hook"] svg{overflow:visible}
+.glove[data-active-punch="hook"] .hook-arm,.glove[data-active-punch="uppercut"] .uppercut-palm{display:block}

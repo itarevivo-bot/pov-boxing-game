@@ -25,17 +25,30 @@ export function createPunchKeyframes({ side, type, glove, target }) {
   let travel;
   if (type === 'hook') {
     const end = { x: target.x + direction * target.width * .14, y: target.faceY };
-    travel = [
-      pose({ x: guard.x + (end.x - guard.x) * .25, y: end.y + glove.height * .06 }, direction * -25, .94, .17),
-      pose(end, direction * -65, .88, contact),
-    ];
+    const setup = { x: guard.x + (end.x - guard.x) * .12, y: end.y + glove.height * .18 };
+    const span = end.x - setup.x;
+    const control1 = { x: setup.x + span * .1, y: end.y - glove.height * .25 };
+    const control2 = { x: end.x - span * .3, y: end.y - glove.height * .2 };
+    function arc(t) {
+      const u = 1 - t;
+      return {
+        x: u ** 3 * setup.x + 3 * u ** 2 * t * control1.x + 3 * u * t ** 2 * control2.x + t ** 3 * end.x,
+        y: u ** 3 * setup.y + 3 * u ** 2 * t * control1.y + 3 * u * t ** 2 * control2.y + t ** 3 * end.y,
+      };
+    }
+    travel = [pose(setup, direction * 35, .97, .1)];
+    for (const t of [.2, .4, .6, .8, 1]) {
+      travel.push(pose(arc(t), direction * (35 + 45 * t), .97 - .09 * t, .1 + (contact - .1) * t));
+    }
+    travel.push(pose(arc(.65), direction * 60, .94, .62), pose(setup, direction * 35, .98, .8));
   } else if (type === 'uppercut') {
-    const low = { x: guard.x, y: guard.y + glove.height * .18 };
+    const low = { x: guard.x, y: Math.max(guard.y, target.chinY + glove.height * .55) + glove.height * .22 };
     const end = { x: target.x, y: target.chinY };
     travel = [
-      pose(low, direction * 25, 1, .12),
-      pose({ x: low.x + (end.x - low.x) * .35, y: low.y + (end.y - low.y) * .4 }, direction * 12, .9, .25),
-      pose(end, 0, .78, contact),
+      pose(low, direction * -50, 1, .12),
+      pose({ x: low.x + (end.x - low.x) * .28, y: low.y + (end.y - low.y) * .4 }, direction * -35, .9, .25),
+      pose(end, direction * -20, .78, contact),
+      pose({ x: low.x + (end.x - low.x) * .55, y: low.y + (end.y - low.y) * .5 }, direction * -15, .88, .66),
     ];
   } else {
     const end = { x: target.x, y: target.faceY };

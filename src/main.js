@@ -3,6 +3,7 @@ import { createFight, punch, counter, tick } from './engine.js';
 const $ = (selector) => document.querySelector(selector);
 let fight = createFight(), started = false, lastPunch = 0, audio, sound = false, generation = 0;
 const animations = new Map();
+const activePunchButtons = new Map();
 let selectedOpponent = null, enteredRing = false;
 const opponentMasters = {
   male: `${import.meta.env.BASE_URL}characters/male_boxer_master_transparent.png`,
@@ -86,6 +87,8 @@ function throwPunch(button) {
   const side = button.dataset.side, type = button.dataset.punch;
   const glove = $(`#${side}-glove`);
   animations.get(side)?.cancel();
+  activePunchButtons.get(side)?.classList.remove('active');
+  glove.dataset.activePunch = type;
   const scene = $('.scene').getBoundingClientRect();
   const opponent = $('#fighter').getBoundingClientRect();
   const frames = createPunchKeyframes({
@@ -99,15 +102,24 @@ function throwPunch(button) {
     },
   });
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  animations.set(side, glove.animate(frames, { duration: reduced ? 120 : 320, easing: 'linear' }));
-  button.classList.add('active'); const current = generation;
-  setTimeout(() => { button.classList.remove('active'); if (current !== generation || fight.ended) return; const damage = punch(fight, type); $('#fighter').classList.remove('hit-left','hit-right','attack'); animateClass($('#fighter'), `hit-${side}`); animateClass($('#impact'),'flash'); $('#hit-text').textContent = `${type === 'uppercut' ? 'UPPERCUT' : type === 'hook' ? 'HOOK' : 'CLEAN HIT'} −${damage}`; animateClass($('#hit-text'),'show'); tone(110); render(); }, reduced ? 50 : 130);
+  const animation = glove.animate(frames, { duration: reduced ? 120 : 320, easing: 'linear' });
+  animations.set(side, animation);
+  activePunchButtons.set(side, button);
+  button.classList.add('active');
+  animation.finished.then(() => {
+    if (animations.get(side) !== animation) return;
+    button.classList.remove('active');
+    delete glove.dataset.activePunch;
+    activePunchButtons.delete(side);
+  }).catch(() => {});
+  const current = generation;
+  setTimeout(() => { if (current !== generation || fight.ended) return; const damage = punch(fight, type); $('#fighter').classList.remove('hit-left','hit-right','attack'); animateClass($('#fighter'), `hit-${side}`); animateClass($('#impact'),'flash'); $('#hit-text').textContent = `${type === 'uppercut' ? 'UPPERCUT' : type === 'hook' ? 'HOOK' : 'CLEAN HIT'} −${damage}`; animateClass($('#hit-text'),'show'); tone(110); render(); }, reduced ? 50 : 130);
 }
 buttons.forEach(button => button.addEventListener('pointerdown', event => { if (event.button !== 0) return; event.preventDefault(); throwPunch(button); }));
 buttons.forEach(button => button.addEventListener('click', event => { if (event.detail === 0) throwPunch(button); }));
 const keys = ['a','s','d','j','k','l'];
 document.addEventListener('keydown', event => { if (!enteredRing || event.repeat || event.ctrlKey || event.metaKey || event.altKey) return; const index = keys.indexOf(event.key.toLowerCase()); if (index !== -1) { event.preventDefault(); throwPunch(buttons[index]); } if (event.key === 'Escape' && fight.ended) reset(); });
-function reset() { generation++; animations.forEach(a => a.cancel()); animations.clear(); fight = createFight(); started = false; lastPunch = -1000; $('#result').hidden = true; buttons.forEach(b => { b.disabled = false; b.classList.remove('active'); }); $('#fighter').classList.remove('attack','hit-left','hit-right'); $('#impact').classList.remove('flash'); $('#hit-text').classList.remove('show'); $('.game').classList.remove('damage'); render(); $('#announcement').textContent = 'New fight ready'; }
+function reset() { generation++; animations.forEach(a => a.cancel()); animations.clear(); activePunchButtons.clear(); for (const side of ['left','right']) delete $(`#${side}-glove`).dataset.activePunch; fight = createFight(); started = false; lastPunch = -1000; $('#result').hidden = true; buttons.forEach(b => { b.disabled = false; b.classList.remove('active'); }); $('#fighter').classList.remove('attack','hit-left','hit-right'); $('#impact').classList.remove('flash'); $('#hit-text').classList.remove('show'); $('.game').classList.remove('damage'); render(); $('#announcement').textContent = 'New fight ready'; }
 $('#restart').addEventListener('click', reset); $('#again').addEventListener('click', () => { reset(); buttons[0].focus(); });
 $('#sound').addEventListener('click', () => { sound = !sound; $('#sound').setAttribute('aria-pressed', String(sound)); $('#sound').setAttribute('aria-label', sound ? 'Mute sound' : 'Enable sound'); if (sound) tone(220); });
 setInterval(() => { if (!started || fight.ended || document.hidden) return; tick(fight); render(); }, 1000);
