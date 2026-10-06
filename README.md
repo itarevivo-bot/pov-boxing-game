@@ -13,7 +13,7 @@ npm run dev
 
 ## Play
 
-Tap the six edge controls to throw left and right hooks, straights, and uppercuts. On a keyboard, use **A / S / D** for the left hand and **J / K / L** for the right hand. The opponent counters every 3.5 seconds after the first punch. Win by knockout or by having more health when the two-minute round ends. Use Reset Fight to start again. Sound is optional and enabled with the music button.
+Tap the six edge controls to throw left and right hooks, straights, and uppercuts. On a keyboard, use **A / S / D** for the left hand and **J / K / L** for the right hand. The opponent counters every 3.5 seconds after the first punch. The fight has no timer and ends only when either fighter reaches zero health. Straights deal 2 damage; hooks and uppercuts deal 3; opponent counters deal 2. Use Reset Fight to start again. Sound is optional and enabled with the music button.
 
 ## Validate
 
@@ -22,7 +22,7 @@ npm test
 npm run build
 ```
 
-The tests cover punch damage, knockout boundaries, counter attacks, and round expiration. No external assets, services, or credentials are required; web fonts fall back to system fonts when unavailable.
+The tests cover punch damage, knockout boundaries, counter attacks, and health-only fight endings. No external assets, services, or credentials are required; web fonts fall back to system fonts when unavailable.
 
 ## GitHub Pages
 

@@ -1,7 +1,40 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import {createFight, punch, counter, tick, DAMAGE} from '../src/engine.js';
-test('all six punch choices damage the opponent', () => { for (const side of ['left','right']) for (const type of Object.keys(DAMAGE)) { const fight = createFight(); assert.equal(punch(fight,type), DAMAGE[type], `${side} ${type}`); assert.equal(fight.opponent, 100-DAMAGE[type]); assert.equal(fight.punches,1); } });
-test('knockout clamps health and stops combat', () => { const fight = createFight(); for(let i=0;i<10;i++) punch(fight,'uppercut'); assert.equal(fight.opponent,0); assert.equal(fight.ended,true); const before = {...fight}; counter(fight); tick(fight); punch(fight,'hook'); assert.deepEqual(fight,before); });
-test('counter attacks can end the fight', () => { const fight=createFight(); for(let i=0;i<15;i++) counter(fight); assert.equal(fight.player,0); assert.equal(fight.ended,true); });
-test('round ends at zero and reset creates independent state', () => { const fight=createFight(); for(let i=0;i<130;i++) tick(fight); assert.equal(fight.seconds,0); assert.equal(fight.ended,true); assert.deepEqual(createFight(),{player:100,opponent:100,seconds:120,punches:0,ended:false}); });
+import { createFight, punch, counter, DAMAGE } from '../src/engine.js';
+test('punch damage stays low with modest differences', () => {
+  assert.deepEqual(DAMAGE, { hook: 3, straight: 2, uppercut: 3 });
+  for (const type of Object.keys(DAMAGE)) {
+    const fight = createFight();
+    for (let i = 0; i < 20; i++) punch(fight, type);
+    assert.ok(fight.opponent >= 40);
+    assert.equal(fight.ended, false);
+  }
+});
+test('each punch type takes many hits to produce a knockout', () => {
+  for (const type of Object.keys(DAMAGE)) {
+    const fight = createFight(), hits = Math.ceil(100 / DAMAGE[type]);
+    for (let i = 0; i < hits - 1; i++) punch(fight, type);
+    assert.ok(fight.opponent > 0);
+    assert.equal(fight.ended, false);
+    punch(fight, type);
+    assert.equal(fight.opponent, 0);
+    assert.equal(fight.ended, true);
+    const before = { ...fight };
+    counter(fight); punch(fight, 'hook');
+    assert.deepEqual(fight, before);
+  }
+});
+test('counters remove small amounts and end combat only at zero health', () => {
+  const fight = createFight(); counter(fight);
+  assert.equal(fight.player, 98);
+  for (let i = 0; i < 48; i++) counter(fight);
+  assert.equal(fight.player, 2); assert.equal(fight.ended, false);
+  counter(fight);
+  assert.equal(fight.player, 0); assert.equal(fight.ended, true);
+});
+test('fight state contains no time limit and resets both health values', () => {
+  const fight = createFight();
+  assert.deepEqual(fight, { player: 100, opponent: 100, punches: 0, ended: false });
+  punch(fight, 'hook'); counter(fight);
+  assert.deepEqual(createFight(), { player: 100, opponent: 100, punches: 0, ended: false });
+});
