@@ -29,7 +29,7 @@
 @media(max-height:600px) and (min-width:600px){.selection-screen{padding:12px 24px}.selection-brand{font-size:26px}.selection-content{margin:0 auto;max-width:580px}.selection-eyebrow{font-size:8px;margin-bottom:3px}.selection-content h1{font-size:27px}.selection-intro{font-size:10px;margin:5px 0 12px}.opponent-choices{gap:16px}.opponent-choice{padding:9px}.opponent-choice[aria-pressed=true]{padding:8px}.choice-portrait{height:112px}.choice-name{font-size:19px;margin:5px 0}.choice-status{font-size:8px}.selection-action{min-height:67px;margin-top:10px}.selection-action p{font-size:10px;margin-bottom:8px}#start-fight{padding:12px 30px;min-height:44px;font-size:11px}}
 @media(max-width:599px){.selection-screen{padding:20px 16px}.selection-content{margin-top:46px}.selection-content h1{font-size:30px}.opponent-choices{gap:12px}.opponent-choice{padding:10px}.opponent-choice[aria-pressed=true]{padding:9px}.choice-portrait{height:210px}.choice-name{font-size:20px}.choice-status{font-size:7px;letter-spacing:1px}.choice-number{left:12px;top:12px}.selection-action{margin-top:24px}}
 
-/* Render the original master PNGs; only presentation cropping and edge blending. */
-#fighter{aspect-ratio:2 / 3;object-fit:contain;mask-image:linear-gradient(to right,transparent,#000 7%,#000 93%,transparent);-webkit-mask-image:linear-gradient(to right,transparent,#000 7%,#000 93%,transparent)}
+/* Preserve the fighter frame; transparency reveals the existing ring. */
+#fighter{aspect-ratio:2 / 3;object-fit:cover}
 .choice-portrait{position:relative;overflow:hidden;border-radius:4px}
 .choice-portrait img{position:absolute;left:50%;top:0;transform:translateX(-50%);height:160%;width:auto;max-width:none}

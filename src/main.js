@@ -4,8 +4,8 @@ let fight = createFight(), started = false, lastPunch = 0, audio, sound = false,
 const animations = new Map();
 let selectedOpponent = null, enteredRing = false;
 const opponentMasters = {
-  male: `${import.meta.env.BASE_URL}characters/male_boxer_master.png`,
-  female: `${import.meta.env.BASE_URL}characters/female_boxer_master.png`,
+  male: `${import.meta.env.BASE_URL}characters/male_boxer_master_transparent.png`,
+  female: `${import.meta.env.BASE_URL}characters/female_boxer_master_transparent.png`,
 };
 for (const [opponent, source] of Object.entries(opponentMasters)) {
   const image = document.createElement('img');
