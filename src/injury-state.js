@@ -1,4 +1,11 @@
 import { IDLE_REGISTRATION } from './idle-registration.js';
+import { faceDamageLayout } from './face-damage-layout.js';
+
+// Player hand, impact travel and persistent anatomical cheek are separate mappings.
+export const HOOK_MAPPING = {
+  left: { reactionDirection: 'right', damageSide: 'left', screenCheek: 'right', idlePack: 'left' },
+  right: { reactionDirection: 'left', damageSide: 'right', screenCheek: 'left', idlePack: 'right' },
+};
 import { MALE_LEFT_HOOK_FILES } from './male-left-hook.js';
 import { MALE_RIGHT_HOOK_FILES } from './male-right-hook.js';
 
@@ -6,9 +13,10 @@ import { MALE_RIGHT_HOOK_FILES } from './male-right-hook.js';
 export const MALE_HOOK_STAGES = Object.fromEntries(['left', 'right'].map(side => [side,
   (side === 'left' ? MALE_LEFT_HOOK_FILES : MALE_RIGHT_HOOK_FILES).map((reaction, index) => ({
     stage: index + 1,
-    idleLayout: IDLE_REGISTRATION[side][index],
+    idleLayout: IDLE_REGISTRATION[HOOK_MAPPING[side].idlePack][index],
+    faceLayout: faceDamageLayout(side, index),
     reaction,
-    idle: `characters/reactions/male-${side}-hook/idle/male_idle_${side}_damage_10_stage_${String(index + 1).padStart(2, '0')}.png`,
+    idle: `characters/reactions/male-${HOOK_MAPPING[side].idlePack}-hook/idle/male_idle_${HOOK_MAPPING[side].idlePack}_damage_10_stage_${String(index + 1).padStart(2, '0')}.png`,
   })),
 ]));
 

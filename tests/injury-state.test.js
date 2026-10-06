@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { MALE_HOOK_STAGES, createInjuryState, advanceInjury } from '../src/injury-state.js';
+import { MALE_HOOK_STAGES, HOOK_MAPPING, createInjuryState, advanceInjury } from '../src/injury-state.js';
 
 test('left and right hook counts accumulate independently, capped at ten', () => {
   let state = createInjuryState();
@@ -33,5 +33,17 @@ test('both hook packs have ten explicit reaction/idle pairs with PNG transparenc
         assert.equal(png[25], 6);
       }
     }
+  }
+});
+
+test('hook direction is separate from anatomical persistent damage side', () => {
+  assert.deepEqual(HOOK_MAPPING.left, { reactionDirection: 'right', damageSide: 'left', screenCheek: 'right', idlePack: 'left' });
+  assert.deepEqual(HOOK_MAPPING.right, { reactionDirection: 'left', damageSide: 'right', screenCheek: 'left', idlePack: 'right' });
+  for (const side of ['left', 'right']) for (const entry of MALE_HOOK_STAGES[side]) {
+    assert.ok(entry.reaction.includes(`male-${side}-hook`));
+    assert.ok(entry.idle.includes(`male_idle_${side}_damage`));
+    const png = readFileSync(new URL(`../public/${entry.idle}`, import.meta.url));
+    assert.equal(entry.faceLayout.width / png.readUInt32BE(16), 2.33);
+    assert.equal(entry.faceLayout.height / png.readUInt32BE(20), 2.33);
   }
 });

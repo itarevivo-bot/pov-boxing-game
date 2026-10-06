@@ -1,5 +1,5 @@
 import { HOOK_RECOVERY_MS, hookReactionKeyframes } from './hook-reaction-animation.js';
-import { MALE_HOOK_STAGES, createInjuryState, advanceInjury } from './injury-state.js';
+import { MALE_HOOK_STAGES, HOOK_MAPPING, createInjuryState, advanceInjury } from './injury-state.js';
 export const RECOVERY_MS = 320;
 const faces = {
   male: {
@@ -41,13 +41,13 @@ export function createHitReactions(fighter) {
   const guard = fighter.querySelector('.opponent-guard');
   const hookFrames = { left: [], right: [] };
   const idleImages = { left: [], right: [] };
-  // Keep the opposite cheek visible when the latest full guard sprite changes.
-  // LEFT pack injuries occupy the viewer-right cheek; RIGHT occupies viewer-left.
+  // Keep one stable guard beneath localized, eye-aligned injury patches.
+  // Impact direction never determines which screen cheek retains injury.
   const ns = 'http://www.w3.org/2000/svg';
   const definitions = fighter.querySelector('defs');
   const blur = document.createElementNS(ns, 'filter');
   blur.id = 'injury-cheek-feather';
-  blur.innerHTML = '<feGaussianBlur stdDeviation="5"/>';
+  blur.innerHTML = '<feGaussianBlur stdDeviation="8"/>';
   definitions.append(blur);
   const cheekImages = {};
   for (const side of ['left', 'right']) {
@@ -56,9 +56,9 @@ export function createHitReactions(fighter) {
     mask.setAttribute('maskUnits', 'userSpaceOnUse');
     mask.setAttribute('x', '0'); mask.setAttribute('y', '0');
     mask.setAttribute('width', '1086'); mask.setAttribute('height', '1448');
-    const path = side === 'left'
-      ? 'M470 225Q560 210 610 250L610 365Q580 430 500 445L470 390Z'
-      : 'M470 225Q390 210 350 250L365 365Q395 430 470 445Z';
+    const path = HOOK_MAPPING[side].screenCheek === 'left'
+      ? 'M357 247Q388 218 439 237Q461 273 451 336Q425 371 389 348Q357 316 357 247Z'
+      : 'M491 233Q547 214 585 243Q607 286 587 329Q554 360 514 339Q492 297 491 233Z';
     mask.innerHTML = `<path d="${path}" fill="white" filter="url(#injury-cheek-feather)"/>`;
     definitions.append(mask);
     const image = document.createElementNS(ns, 'image');
@@ -75,13 +75,15 @@ export function createHitReactions(fighter) {
     for (const side of ['left', 'right']) {
       const level = side === 'left' ? injury.LeftDamage : injury.RightDamage;
       const image = cheekImages[side];
-      // The most recent side is already represented by the full guard sprite.
-      image.style.display = level > 0 && side !== injury.side ? '' : 'none';
+      // Each counter controls only its own eye/cheek; neither replaces the face.
+      image.style.display = level > 0 ? '' : 'none';
       if (!level) continue;
       const asset = MALE_HOOK_STAGES[side][level - 1];
       image.setAttribute('href', `${import.meta.env.BASE_URL}${asset.idle}`);
       image.dataset.stage = level;
-      for (const [name, value] of Object.entries(asset.idleLayout)) image.setAttribute(name, value);
+      image.dataset.damageSide = HOOK_MAPPING[side].damageSide;
+      image.dataset.screenCheek = HOOK_MAPPING[side].screenCheek;
+      for (const [name, value] of Object.entries(asset.faceLayout)) image.setAttribute(name, value);
     }
   }
   function applyIdle(source, layout = { x: 0, y: 0, width: 1086, height: 1448 }) {
@@ -142,10 +144,11 @@ export function createHitReactions(fighter) {
       injury = nextInjury;
       const stage = injury.stage;
       // Recovery, counters, and non-hook hits all reuse this damaged guard.
-      applyIdle(idleImages[side][stage - 1].src, MALE_HOOK_STAGES[side][stage - 1].idleLayout);
+      // Recover onto a single neutral guard plus both independently retained injuries.
+      applyIdle(masterSource);
       // Artwork supplies the received-head direction; subtle motion adds snap,
       // peak recoil and recovery without flipping either directional asset set.
-      const frames = hookReactionKeyframes(side);
+      const frames = hookReactionKeyframes(side, HOOK_MAPPING[side].reactionDirection);
       const hookOptions = { duration: HOOK_RECOVERY_MS, easing: 'linear' };
       running.push(guard.animate(frames.guard, hookOptions));
       const frame = hookFrames[side][stage - 1];

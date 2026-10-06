@@ -1,9 +1,10 @@
 // Animation preparation is separate from asset selection. Never mirror artwork.
 export const HOOK_RECOVERY_MS = 525;
 
-export function hookReactionKeyframes(side) {
+export function hookReactionKeyframes(side, screenDirection = side === 'left' ? 'right' : 'left') {
   if (side !== 'left' && side !== 'right') throw new RangeError('Unknown hook hand');
-  const direction = side === 'left' ? 1 : -1;
+  if (!['left', 'right'].includes(screenDirection)) throw new RangeError('Unknown reaction direction');
+  const direction = screenDirection === 'right' ? 1 : -1;
   const pose = (x, y, angle) => `translate(${direction * x}px, ${y}px) rotate(${direction * angle}deg)`;
   return {
     guard: [
